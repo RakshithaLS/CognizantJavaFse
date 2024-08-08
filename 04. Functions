@@ -1,0 +1,70 @@
+//SCENARIO 1
+
+-- Active: 1722572272774@@127.0.0.1@1521@XE@JAVAFSE
+CREATE OR REPLACE FUNCTION CalculateAge (
+    date_of_birth IN DATE
+) RETURN NUMBER
+
+IS
+    age NUMBER;
+
+BEGIN
+    age := FLOOR(MONTHS_BETWEEN(SYSDATE, date_of_birth) / 12);
+    RETURN age;
+    
+END CalculateAge;
+/
+
+//SCENARIO 2
+
+CREATE OR REPLACE FUNCTION CalculateMonthlyInstallment (
+    loan_amount IN NUMBER,
+    annual_interest_rate IN NUMBER,
+    loan_duration_years IN NUMBER
+) RETURN NUMBER
+IS
+    monthly_interest_rate NUMBER;
+    number_of_payments NUMBER;
+    monthly_installment NUMBER;
+BEGIN
+    monthly_interest_rate := annual_interest_rate / 12 / 100;
+    number_of_payments := loan_duration_years * 12;
+    
+    IF monthly_interest_rate = 0 THEN
+        monthly_installment := loan_amount / number_of_payments;
+    ELSE
+        monthly_installment := loan_amount * monthly_interest_rate / 
+            (1 - POWER(1 + monthly_interest_rate, -number_of_payments));
+    END IF;
+    
+    RETURN monthly_installment;
+    
+END CalculateMonthlyInstallment;
+
+//SCENARIO 3
+
+CREATE OR REPLACE FUNCTION HasSufficientBalance (
+    account_id IN NUMBER,
+    amount IN NUMBER
+) RETURN BOOLEAN
+IS
+    current_balance NUMBER;
+BEGIN
+    -- Retrieve the current balance of the account
+    SELECT balance INTO current_balance FROM Accounts WHERE account_id = account_id;
+    
+    -- Check if the balance is sufficient
+    IF current_balance >= amount THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        -- Handle the case where the account ID does not exist
+        RETURN FALSE;
+    WHEN OTHERS THEN
+        -- Handle any other exceptions
+        RETURN FALSE;
+        
+END HasSufficientBalance;
