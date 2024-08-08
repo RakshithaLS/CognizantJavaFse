@@ -1,0 +1,106 @@
+//SCENARIO 1
+
+CREATE OR REPLACE PROCEDURE SafeTransferFunds (
+    from_account_id IN NUMBER,
+    to_account_id IN NUMBER,
+    amount IN NUMBER
+)
+IS
+    insufficient_funds EXCEPTION;
+    funds_balance NUMBER;
+BEGIN
+    -- Check balance of the from_account
+    SELECT balance INTO funds_balance FROM Accounts WHERE account_id = from_account_id FOR UPDATE;
+    
+    IF funds_balance < amount THEN
+        RAISE insufficient_funds;
+    ELSE
+        -- Deduct the amount from the from_account
+        UPDATE Accounts SET balance = balance - amount WHERE account_id = from_account_id;
+        
+        -- Add the amount to the to_account
+        UPDATE Accounts SET balance = balance + amount WHERE account_id = to_account_id;
+    END IF;
+
+    COMMIT;
+EXCEPTION
+    WHEN insufficient_funds THEN
+        -- Log the error
+        INSERT INTO ErrorLogs (message, log_time) VALUES ('Insufficient funds for transfer', SYSDATE);
+        ROLLBACK;
+    WHEN OTHERS THEN
+        -- Log any other errors
+        INSERT INTO ErrorLogs (message, log_time) VALUES (SQLERRM, SYSDATE);
+        ROLLBACK;
+END SafeTransferFunds;
+
+//SCENARIO 2
+
+CREATE OR REPLACE PROCEDURE UpdateSalary (
+    employee_id IN NUMBER,
+    percentage IN NUMBER
+)
+IS
+    employee_not_found EXCEPTION;
+    v_count NUMBER;
+    
+BEGIN
+    -- Check if the employee exists
+    SELECT COUNT(*) INTO v_count FROM Employees WHERE id = employee_id FOR UPDATE;
+    
+    IF v_count = 0 THEN
+        RAISE employee_not_found;
+    ELSE
+        -- Update the employee's salary
+        UPDATE Employees 
+        SET salary = salary + (salary * (percentage / 100)) 
+        WHERE id = employee_id;
+    END IF;
+    COMMIT;
+
+EXCEPTION
+    WHEN employee_not_found THEN
+        -- Log the error
+        INSERT INTO ErrorLogs (message, log_time) VALUES ('Employee ID not found', SYSDATE);
+        ROLLBACK;
+    WHEN OTHERS THEN
+        -- Log any other errors
+        INSERT INTO ErrorLogs (message, log_time) VALUES (SQLERRM, SYSDATE);
+        ROLLBACK;
+
+
+END UpdateSalary;
+
+//SCENARIO 3
+
+CREATE OR REPLACE PROCEDURE AddNewCustomer (
+    customer_id IN NUMBER, 
+    customer_name IN VARCHAR2, 
+    customer_email IN VARCHAR2
+)
+IS
+    customer_exists EXCEPTION;
+    v_count NUMBER;
+BEGIN
+    -- Check if the customer already exists
+    SELECT COUNT(*) INTO v_count FROM Customers WHERE id = customer_id;
+    
+    IF v_count > 0 THEN
+        RAISE customer_exists;
+    ELSE
+        -- Insert the new customer
+        INSERT INTO Customers (id, name, email) VALUES (customer_id, customer_name, customer_email);
+    END IF;
+
+    COMMIT;
+EXCEPTION
+    WHEN customer_exists THEN
+        -- Log the error
+        INSERT INTO ErrorLogs (message, log_time) VALUES ('Customer ID already exists', SYSDATE);
+        ROLLBACK;
+    WHEN OTHERS THEN
+        -- Log any other errors
+        INSERT INTO ErrorLogs (message, log_time) VALUES (SQLERRM, SYSDATE);
+        ROLLBACK;
+END AddNewCustomer;
+
